@@ -11,7 +11,7 @@ class Shared {
     return key;
   }
 
-  static Future<LoginRes> getToken() async {
+  static Future<LoginRes> getToken(BuildContext context) async {
     var key = await APICacheManager().isAPICacheKeyExist("login_details");
 
     if (key) {
@@ -19,7 +19,13 @@ class Shared {
 
       return LoginRes.fromJson(json.decode(data.syncData));
     }
-
+    if (context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/login',
+        (route) => false,
+      );
+    }
     return LoginRes(mes: "Invalid", code: 2, token: "2");
   }
 
