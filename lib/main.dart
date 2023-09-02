@@ -2,15 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:tracker_app/screens/auth/login.dart';
 import 'package:tracker_app/screens/auth/register.dart';
 import 'package:tracker_app/screens/home/home.dart';
+import 'package:tracker_app/services/notification.dart';
 import 'package:tracker_app/services/shared.dart';
 
 Widget defaultpage = const Login();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (await Shared.isLogged()) {
     defaultpage = const Home();
   }
+
+  NotificationService.init();
 
   runApp(const MyApp());
 }

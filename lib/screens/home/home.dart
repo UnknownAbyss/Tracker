@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet_coder_utils/hex_color.dart';
 import 'package:tracker_app/config.dart';
 import 'package:tracker_app/models/auth_model.dart';
+import 'package:tracker_app/services/notification.dart';
 import 'package:tracker_app/services/shared.dart';
 
 class Home extends StatefulWidget {
@@ -16,11 +20,21 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   String title = "User:  ";
   bool marked = false;
+  bool markedtdy = false;
+  DateTime? starttime;
+  DateTime? endtime;
+  double distance = 0.0;
+  List<Position> position = [];
+  String curloc = "";
+  Timer? timer;
 
   @override
   void initState() {
     super.initState();
     getUser(context);
+    Shared.locperm(context);
+    print("Doing updates");
+    updateStates();
   }
 
   @override
@@ -34,14 +48,41 @@ class _HomeState extends State<Home> {
           title: Text(title),
           actions: [
             IconButton(
-              onPressed: () {
-                Shared.logout(context);
+              onPressed: () async {
+                bool? x = await showAlertBox(context, "Sync");
+                if (x! && context.mounted) {
+                  resetDay();
+                }
+              },
+              icon: const Icon(
+                Icons.sync,
+                color: Colors.white,
+              ),
+            ),
+            IconButton(
+              onPressed: () async {
+                bool? x = await showAlertBox(context, "Sync");
+                if (x! && context.mounted) {
+                  refresh();
+                }
+              },
+              icon: const Icon(
+                Icons.refresh_sharp,
+                color: Colors.white,
+              ),
+            ),
+            IconButton(
+              onPressed: () async {
+                bool? x = await showAlertBox(context, "Logout");
+                if (x! && context.mounted) {
+                  Shared.logout(context);
+                }
               },
               icon: const Icon(
                 Icons.logout,
                 color: Colors.white,
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -60,32 +101,27 @@ class _HomeState extends State<Home> {
                 height: 150,
                 width: MediaQuery.of(context).size.width - 60,
                 child: ElevatedButton(
+                  onPressed: markedtdy ? null : attendButton,
                   style: ButtonStyle(
-                      backgroundColor: MaterialStatePropertyAll(marked
+                    elevation: MaterialStatePropertyAll(5),
+                    backgroundColor: MaterialStatePropertyAll(
+                      marked
                           ? HexColor("#245D66").withOpacity(0.9)
-                          : HexColor("#245D66")),
-                      elevation: MaterialStatePropertyAll(5),
-                      side: MaterialStatePropertyAll(
-                        BorderSide(
-                          width: 5,
-                          color: marked ? Colors.red.shade300 : Colors.white54,
-                        ),
-                      )),
+                          : HexColor("#245D66"),
+                    ),
+                    side: MaterialStatePropertyAll(
+                      BorderSide(
+                        width: 5,
+                        color: marked ? Colors.red.shade300 : Colors.white54,
+                      ),
+                    ),
+                  ),
                   child: Text(marked ? "End Attendance" : "Start Attendance"),
-                  onPressed: () async {
-                    bool? x = true;
-                    x = await showAlertBox(context);
-                    if (x!) {
-                      setState(() {
-                        marked = !marked;
-                      });
-                    }
-                  },
                 ),
               ),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
+                padding: const EdgeInsets.only(
+                    left: 8, right: 8, top: 20, bottom: 40),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Column(
@@ -95,33 +131,52 @@ class _HomeState extends State<Home> {
                         padding: const EdgeInsets.only(bottom: 10),
                         child: statusText(
                           context,
-                          "Date:",
+                          "",
                           DateFormat('d/M/y').format(DateTime.now()),
                           HexColor("#245D66"),
                         ),
                       ),
                       statusText(
                         context,
-                        "Marked Today",
-                        marked ? "Yes" : "No",
-                        marked ? Colors.green : Colors.red,
+                        "Marked Today:",
+                        markedtdy ? "Yes" : "No",
+                        markedtdy ? Colors.green : Colors.red,
                       ),
                       statusText(
                         context,
-                        "Start TIme",
-                        marked ? "Yes" : "No",
-                        marked ? Colors.green : Colors.red,
+                        "Start Time:",
+                        starttime != null
+                            ? DateFormat('h:mm a').format(starttime!)
+                            : "-",
+                        Colors.black,
                       ),
                       statusText(
                         context,
-                        "End Time",
-                        marked ? "Yes" : "No",
-                        marked ? Colors.green : Colors.red,
+                        "End Time:",
+                        endtime != null
+                            ? DateFormat('h:mm a').format(endtime!)
+                            : "-",
+                        Colors.black,
                       ),
                     ],
                   ),
                 ),
               ),
+              Column(
+                children: [
+                  const Text(
+                    "DISTANCE",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+                  ),
+                  Text("${distance.toStringAsFixed(3)} km"),
+                  SizedBox(height: 20),
+                  const Text(
+                    "Current Location",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+                  ),
+                  Text(curloc),
+                ],
+              )
             ],
           ),
         ),
@@ -129,25 +184,31 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Future<bool?> showAlertBox(BuildContext context) {
+  Future<bool?> showAlertBox(BuildContext context, String title) {
     Widget ok = TextButton(
       onPressed: () {
         Navigator.of(context).pop(true);
       },
-      child: Text("Confirm"),
+      child: const Text(
+        "Confirm",
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
     );
 
     Widget back = TextButton(
       onPressed: () {
         Navigator.of(context).pop(false);
       },
-      child: Text("Back"),
+      child: const Text(
+        "Back",
+        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+      ),
     );
 
     AlertDialog alert = AlertDialog(
-      title: const Text(Config.appName),
+      title: Text(title),
       content: const Text("Do you wish to proceed?"),
-      actions: [ok, back],
+      actions: [back, ok],
     );
 
     return showDialog<bool>(
@@ -200,5 +261,110 @@ class _HomeState extends State<Home> {
         );
       }
     }
+  }
+
+  void attendButton() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
+
+    if (markedtdy) {
+      return;
+    }
+
+    bool? x;
+    x = await showAlertBox(context, "Attendance");
+
+    if (x!) {
+      if (marked) {
+        DateTime temp = DateTime.now();
+        setState(() {
+          marked = !marked;
+          markedtdy = !markedtdy;
+          endtime = temp;
+          timer?.cancel();
+          refresh();
+        });
+        await pref.setInt("end", temp.millisecondsSinceEpoch);
+        await pref.setBool("ongoing", false);
+        await pref.setBool("markedtdy", true);
+        print("Ending notif");
+        NotificationService.destroy();
+      } else {
+        DateTime temp = DateTime.now();
+        setState(() {
+          marked = !marked;
+          starttime = temp;
+          timer = Timer.periodic(const Duration(seconds: Config.updateFreq),
+              (timer) {
+            refresh();
+          });
+        });
+        await pref.setInt("start", temp.millisecondsSinceEpoch);
+        await pref.setBool("ongoing", true);
+        print("Spawning Isolate");
+        NotificationService.spawnLocIsolate();
+      }
+    }
+  }
+
+  void refresh() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
+
+    print("Refreshn");
+    String loc = "No location found";
+    double dist = 0;
+    await pref.reload();
+    if (pref.containsKey("latest_loc")) {
+      loc = pref.getString("latest_loc")!;
+    }
+    if (pref.containsKey("dist")) {
+      dist = pref.getDouble("dist")!;
+    }
+    setState(() {
+      curloc = loc;
+      distance = dist / 1000;
+    });
+  }
+
+  updateStates() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    if (!pref.containsKey("markedtdy")) {
+      await pref.setBool("markedtdy", false);
+    }
+    if (!pref.containsKey("ongoing")) {
+      await pref.setBool("ongoing", false);
+    }
+
+    setState(() {
+      if (!pref.containsKey("start")) {
+        starttime = null;
+      } else {
+        starttime = DateTime.fromMillisecondsSinceEpoch(pref.getInt("start")!);
+      }
+      if (!pref.containsKey("end")) {
+        endtime = null;
+      } else {
+        endtime = DateTime.fromMillisecondsSinceEpoch(pref.getInt("end")!);
+      }
+      markedtdy = pref.getBool("markedtdy")!;
+      marked = pref.getBool("ongoing")!;
+      if (pref.getBool("ongoing")!) {
+        timer =
+            Timer.periodic(const Duration(seconds: Config.updateFreq), (timer) {
+          refresh();
+        });
+      }
+    });
+    refresh();
+  }
+
+  resetDay() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    await pref.setBool("markedtdy", false);
+    await pref.setBool("ongoing", false);
+    await pref.remove("start");
+    await pref.remove("end");
+    await pref.remove("latest_loc");
+    await pref.remove("dist");
+    updateStates();
   }
 }

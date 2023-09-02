@@ -1,24 +1,26 @@
-import 'package:api_cache_manager/models/cache_db_model.dart';
-import 'package:api_cache_manager/utils/cache_manager.dart';
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tracker_app/models/auth_model.dart';
-import 'dart:convert';
 
 class Shared {
   static Future<bool> isLogged() async {
-    var key = await APICacheManager().isAPICacheKeyExist("login_details");
-
+    var pref = await SharedPreferences.getInstance();
+    var key = pref.containsKey("token");
     return key;
   }
 
   static Future<LoginRes> getToken(BuildContext context) async {
-    var key = await APICacheManager().isAPICacheKeyExist("login_details");
+    var pref = await SharedPreferences.getInstance();
+    var key = pref.containsKey("token");
 
     if (key) {
-      var data = await APICacheManager().getCacheData("login_details");
-
-      return LoginRes.fromJson(json.decode(data.syncData));
+      var data = pref.getString("token");
+      return LoginRes(mes: "None", code: 0, token: data!);
     }
+
     if (context.mounted) {
       Navigator.pushNamedAndRemoveUntil(
         context,
@@ -30,22 +32,52 @@ class Shared {
   }
 
   static setToken(LoginRes model) async {
-    APICacheDBModel cache = APICacheDBModel(
-      key: "login_details",
-      syncData: jsonEncode(model.toJson()),
-    );
-
-    await APICacheManager().addCacheData(cache);
+    var pref = await SharedPreferences.getInstance();
+    await pref.setString("token", model.token);
   }
 
   static logout(BuildContext context) async {
-    await APICacheManager().deleteCache("login_details");
+    var pref = await SharedPreferences.getInstance();
+    await pref.remove("token");
     if (context.mounted) {
       Navigator.pushNamedAndRemoveUntil(
         context,
         '/login',
         (route) => false,
       );
+    }
+  }
+
+  static Future<Position> getloc(BuildContext context) async {
+    locenabled(context);
+    locperm(context);
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium);
+    return position;
+  }
+
+  static void locperm(BuildContext context) async {
+    LocationPermission perm;
+
+    perm = await Geolocator.checkPermission();
+
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+      if (perm == LocationPermission.denied) {
+        if (context.mounted) {
+          logout(context);
+        }
+      }
+    }
+  }
+
+  static void locenabled(BuildContext context) async {
+    bool enabled;
+    enabled = await Geolocator.isLocationServiceEnabled();
+    if (!enabled) {
+      if (context.mounted) {
+        logout(context);
+      }
     }
   }
 }
