@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tracker_app/models/auth_model.dart';
+import 'package:tracker_app/services/notification.dart';
 
 class Shared {
   static Future<bool> isLogged() async {
@@ -48,27 +49,47 @@ class Shared {
     }
   }
 
-  static Future<Position> getloc(BuildContext context) async {
-    locenabled(context);
-    locperm(context);
-    Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium);
-    return position;
-  }
-
-  static void locperm(BuildContext context) async {
+  static Future<bool> locperm() async {
     LocationPermission perm;
-
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      print("1");
+      NotifService.displayNotif(
+        "Location",
+        "Enable Location permissions first",
+        false,
+      );
+      return false;
+    }
     perm = await Geolocator.checkPermission();
 
-    if (perm == LocationPermission.denied) {
+    if (perm != LocationPermission.always) {
+      NotifService.displayNotif(
+        "Location",
+        "Grant permission: allow always",
+        false,
+      );
+      print(2);
       perm = await Geolocator.requestPermission();
-      if (perm == LocationPermission.denied) {
-        if (context.mounted) {
-          logout(context);
+      if (perm != LocationPermission.always) {
+        NotifService.displayNotif(
+          "Location",
+          "Grant permission: allow always",
+          false,
+        );
+        perm = await Geolocator.requestPermission();
+        if (perm != LocationPermission.always) {
+          print("Don't have perms");
+          NotifService.displayNotif(
+            "Location",
+            "Denied: Acquire Location Permissions",
+            false,
+          );
+          return false;
         }
       }
     }
+
+    return true;
   }
 
   static void locenabled(BuildContext context) async {

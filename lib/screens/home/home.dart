@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet_coder_utils/hex_color.dart';
 import 'package:tracker_app/config.dart';
 import 'package:tracker_app/models/auth_model.dart';
+import 'package:tracker_app/services/background.dart';
 import 'package:tracker_app/services/notification.dart';
 import 'package:tracker_app/services/shared.dart';
 
@@ -32,7 +33,6 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     getUser(context);
-    Shared.locperm(context);
     print("Doing updates");
     updateStates();
   }
@@ -43,7 +43,7 @@ class _HomeState extends State<Home> {
       child: Scaffold(
         body: _HomeUI(context),
         appBar: AppBar(
-          backgroundColor: HexColor("#245D66"),
+          backgroundColor: HexColor(Config.appColor),
           toolbarHeight: kToolbarHeight * 1.5,
           title: Text(title),
           actions: [
@@ -106,8 +106,8 @@ class _HomeState extends State<Home> {
                     elevation: MaterialStatePropertyAll(5),
                     backgroundColor: MaterialStatePropertyAll(
                       marked
-                          ? HexColor("#245D66").withOpacity(0.9)
-                          : HexColor("#245D66"),
+                          ? HexColor(Config.appColor).withOpacity(0.9)
+                          : HexColor(Config.appColor),
                     ),
                     side: MaterialStatePropertyAll(
                       BorderSide(
@@ -116,7 +116,12 @@ class _HomeState extends State<Home> {
                       ),
                     ),
                   ),
-                  child: Text(marked ? "End Attendance" : "Start Attendance"),
+                  child: Text(
+                    marked ? "End Attendance" : "Start Attendance",
+                    style: TextStyle(
+                      color: markedtdy ? Colors.grey : Colors.white,
+                    ),
+                  ),
                 ),
               ),
               Padding(
@@ -133,7 +138,7 @@ class _HomeState extends State<Home> {
                           context,
                           "",
                           DateFormat('d/M/y').format(DateTime.now()),
-                          HexColor("#245D66"),
+                          HexColor(Config.appColor),
                         ),
                       ),
                       statusText(
@@ -270,6 +275,10 @@ class _HomeState extends State<Home> {
       return;
     }
 
+    if (!await Shared.locperm()) {
+      return;
+    }
+
     bool? x;
     x = await showAlertBox(context, "Attendance");
 
@@ -287,7 +296,7 @@ class _HomeState extends State<Home> {
         await pref.setBool("ongoing", false);
         await pref.setBool("markedtdy", true);
         print("Ending notif");
-        NotificationService.destroy();
+        BackgroundService.destroy();
       } else {
         DateTime temp = DateTime.now();
         setState(() {
@@ -298,10 +307,8 @@ class _HomeState extends State<Home> {
             refresh();
           });
         });
-        await pref.setInt("start", temp.millisecondsSinceEpoch);
-        await pref.setBool("ongoing", true);
         print("Spawning Isolate");
-        NotificationService.spawnLocIsolate();
+        BackgroundService.spawnLocIsolate(temp.millisecondsSinceEpoch);
       }
     }
   }
@@ -365,6 +372,12 @@ class _HomeState extends State<Home> {
     await pref.remove("end");
     await pref.remove("latest_loc");
     await pref.remove("dist");
+    await pref.remove("position");
     updateStates();
+    NotifService.displayNotif(
+      "Day Reset",
+      "Cache cleared",
+      false,
+    );
   }
 }

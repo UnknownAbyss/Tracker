@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tracker_app/screens/auth/login.dart';
-import 'package:tracker_app/screens/auth/register.dart';
 import 'package:tracker_app/screens/home/home.dart';
+import 'package:tracker_app/services/background.dart';
 import 'package:tracker_app/services/notification.dart';
 import 'package:tracker_app/services/shared.dart';
 
@@ -14,7 +14,9 @@ void main() async {
     defaultpage = const Home();
   }
 
-  NotificationService.init();
+  NotifService.init();
+  BackgroundService.init();
+  NotifService.setupNotif();
 
   runApp(const MyApp());
 }
@@ -31,7 +33,6 @@ class MyApp extends StatelessWidget {
         '/': (context) => defaultpage,
         '/home': (context) => const Home(),
         '/login': (context) => const Login(),
-        '/register': (context) => const Register(),
       },
     );
   }

@@ -6,6 +6,7 @@ import "package:snippet_coder_utils/hex_color.dart";
 import "package:tracker_app/config.dart";
 import "package:tracker_app/models/auth_model.dart";
 import "package:tracker_app/services/api.dart";
+import "package:tracker_app/services/notification.dart";
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -24,7 +25,7 @@ class _LoginState extends State<Login> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        backgroundColor: HexColor("#245D66"),
+        backgroundColor: HexColor(Config.appColor),
         body: ProgressHUD(
           inAsyncCall: loading,
           opacity: 0.3,
@@ -56,11 +57,11 @@ class _LoginState extends State<Login> {
                     Colors.white,
                   ]),
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(100),
-                bottomRight: Radius.circular(100),
+                bottomLeft: Radius.elliptical(200, 50),
+                bottomRight: Radius.elliptical(200, 50),
               ),
             ),
-            child: Column(
+            child: const Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
@@ -127,7 +128,7 @@ class _LoginState extends State<Login> {
               borderColor: Colors.white,
               showPrefixIcon: true,
               prefixIcon: const Icon(
-                Icons.person,
+                Icons.lock,
                 color: Colors.white,
               ),
               textColor: Colors.white,
@@ -151,14 +152,41 @@ class _LoginState extends State<Login> {
               padding: const EdgeInsets.only(right: 30),
               child: RichText(
                 text: TextSpan(
-                    text: "Forgot password..?",
+                    text: "Request Notification Permission...?",
                     style: const TextStyle(
                       color: Colors.white,
                       decoration: TextDecoration.underline,
                     ),
                     recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        print("Forget");
+                      ..onTap = () async {
+                        print("Tapped");
+                        bool granted = await NotifService.requestNotifPerm();
+                        print(granted);
+                        if (context.mounted) {
+                          if (!granted) {
+                            print("Get");
+                            FormHelper.showSimpleAlertDialog(
+                              context,
+                              Config.appName,
+                              "App needs notification permissions",
+                              "Ok",
+                              () {
+                                Navigator.pop(context);
+                              },
+                            );
+                          } else {
+                            print("Have");
+                            FormHelper.showSimpleAlertDialog(
+                              context,
+                              Config.appName,
+                              "App already has notification permissions",
+                              "Ok",
+                              () {
+                                Navigator.pop(context);
+                              },
+                            );
+                          }
+                        }
                       }),
               ),
             ),
@@ -169,11 +197,30 @@ class _LoginState extends State<Login> {
           Center(
             child: FormHelper.submitButton(
               "Login",
-              () {
+              () async {
                 if (validateSave()) {
                   setState(() {
                     loading = true;
                   });
+
+                  var perm = await NotifService.requestNotifPerm();
+                  if (!perm) {
+                    if (context.mounted) {
+                      FormHelper.showSimpleAlertDialog(
+                        context,
+                        Config.appName,
+                        "Need notification permissions",
+                        "Ok",
+                        () {
+                          Navigator.pop(context);
+                        },
+                      );
+                    }
+                    setState(() {
+                      loading = false;
+                    });
+                    return;
+                  }
 
                   LoginReq req = LoginReq(user: user!, pass: pass!);
                   ApiService.login(req).then((res) {
@@ -201,7 +248,7 @@ class _LoginState extends State<Login> {
                 }
               },
               btnColor: HexColor("#EEEEEE"),
-              txtColor: HexColor("#245D66"),
+              txtColor: HexColor(Config.appColor),
               borderColor: HexColor("#537A80"),
             ),
           ),

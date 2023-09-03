@@ -14,10 +14,6 @@ set(WRAPPER_ROOT "${EPHEMERAL_DIR}/cpp_client_wrapper")
 set(FLUTTER_LIBRARY "${EPHEMERAL_DIR}/flutter_windows.dll")
 
 # Published to parent scope for install step.
-set(FLUTTER_LIBRARY ${FLUTTER_LIBRARY} PARENT_SCOPE)
-set(FLUTTER_ICU_DATA_FILE "${EPHEMERAL_DIR}/icudtl.dat" PARENT_SCOPE)
-set(PROJECT_BUILD_DIR "${PROJECT_DIR}/build/" PARENT_SCOPE)
-set(AOT_LIBRARY "${PROJECT_DIR}/build/windows/app.so" PARENT_SCOPE)
 
 list(APPEND FLUTTER_LIBRARY_HEADERS
   "flutter_export.h"
@@ -55,7 +51,7 @@ add_library(flutter_wrapper_plugin STATIC
   ${CPP_WRAPPER_SOURCES_CORE}
   ${CPP_WRAPPER_SOURCES_PLUGIN}
 )
-apply_standard_settings(flutter_wrapper_plugin)
+
 set_target_properties(flutter_wrapper_plugin PROPERTIES
   POSITION_INDEPENDENT_CODE ON)
 set_target_properties(flutter_wrapper_plugin PROPERTIES
@@ -71,7 +67,6 @@ add_library(flutter_wrapper_app STATIC
   ${CPP_WRAPPER_SOURCES_CORE}
   ${CPP_WRAPPER_SOURCES_APP}
 )
-apply_standard_settings(flutter_wrapper_app)
 target_link_libraries(flutter_wrapper_app PUBLIC flutter)
 target_include_directories(flutter_wrapper_app PUBLIC
   "${WRAPPER_ROOT}/include"
