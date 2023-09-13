@@ -7,10 +7,11 @@ class Config {
 
   static const String loginRoute = "/auth/login";
   static const String userRoute = "/auth/user";
+  static const String submitRoute = "/location/submit";
 
   // Distance checking frequency
-  static const int distPeriod = 5;
-  static const double distFilter = 0;
+  static const int distPeriod = 20;
+  static const double distFilter = 5;
 
   // Update frequency of Values
   static const int updateFreq = 10;

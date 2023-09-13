@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet_coder_utils/hex_color.dart';
 import 'package:tracker_app/config.dart';
 import 'package:tracker_app/models/auth_model.dart';
+import 'package:tracker_app/services/api.dart';
 import 'package:tracker_app/services/background.dart';
 import 'package:tracker_app/services/notification.dart';
 import 'package:tracker_app/services/shared.dart';
@@ -22,6 +23,7 @@ class _HomeState extends State<Home> {
   String title = "User:  ";
   bool marked = false;
   bool markedtdy = false;
+  bool submittdy = false;
   DateTime? starttime;
   DateTime? endtime;
   double distance = 0.0;
@@ -126,7 +128,7 @@ class _HomeState extends State<Home> {
               ),
               Padding(
                 padding: const EdgeInsets.only(
-                    left: 8, right: 8, top: 20, bottom: 40),
+                    left: 8, right: 8, top: 20, bottom: 30),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Column(
@@ -170,18 +172,19 @@ class _HomeState extends State<Home> {
               Column(
                 children: [
                   const Text(
-                    "DISTANCE",
+                    "Distance",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
                   ),
                   Text("${distance.toStringAsFixed(3)} km"),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   const Text(
                     "Current Location",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
                   ),
                   Text(curloc),
                 ],
-              )
+              ),
+              _Submitter(context),
             ],
           ),
         ),
@@ -189,7 +192,42 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Future<bool?> showAlertBox(BuildContext context, String title) {
+  Widget _Submitter(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 30),
+      child: Column(
+        children: [
+          const Text(
+            "Submitted to Server",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                color: submittdy ? Colors.green : Colors.red,
+              ),
+              const SizedBox(width: 5),
+              Text(submittdy ? "Submitted" : "Not Submitted"),
+            ],
+          ),
+          ElevatedButton(
+            style: ButtonStyle(
+              backgroundColor:
+                  MaterialStatePropertyAll(HexColor(Config.appColor)),
+            ),
+            onPressed: markedtdy && !submittdy ? submitbttn : null,
+            child: Text("Submit to server"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool?> showAlertBox(BuildContext context, String title,
+      [String text = "Do you wish to proceed?", bool confirm = true]) {
     Widget ok = TextButton(
       onPressed: () {
         Navigator.of(context).pop(true);
@@ -212,8 +250,8 @@ class _HomeState extends State<Home> {
 
     AlertDialog alert = AlertDialog(
       title: Text(title),
-      content: const Text("Do you wish to proceed?"),
-      actions: [back, ok],
+      content: Text(text),
+      actions: confirm ? [back, ok] : [ok],
     );
 
     return showDialog<bool>(
@@ -254,6 +292,7 @@ class _HomeState extends State<Home> {
     Map<String, dynamic> decoded;
     try {
       decoded = JwtDecoder.decode(data.token);
+      print(data.token);
       setState(() {
         title = "User: ${decoded['user']}";
       });
@@ -340,6 +379,9 @@ class _HomeState extends State<Home> {
     if (!pref.containsKey("ongoing")) {
       await pref.setBool("ongoing", false);
     }
+    if (!pref.containsKey("submitted")) {
+      await pref.setBool("submitted", false);
+    }
 
     setState(() {
       if (!pref.containsKey("start")) {
@@ -353,6 +395,7 @@ class _HomeState extends State<Home> {
         endtime = DateTime.fromMillisecondsSinceEpoch(pref.getInt("end")!);
       }
       markedtdy = pref.getBool("markedtdy")!;
+      submittdy = pref.getBool("submitted")!;
       marked = pref.getBool("ongoing")!;
       if (pref.getBool("ongoing")!) {
         timer =
@@ -368,6 +411,7 @@ class _HomeState extends State<Home> {
     SharedPreferences pref = await SharedPreferences.getInstance();
     await pref.setBool("markedtdy", false);
     await pref.setBool("ongoing", false);
+    await pref.setBool("submitted", false);
     await pref.remove("start");
     await pref.remove("end");
     await pref.remove("latest_loc");
@@ -379,5 +423,39 @@ class _HomeState extends State<Home> {
       "Cache cleared",
       false,
     );
+  }
+
+  submitbttn() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    Map<String, dynamic> res = <String, dynamic>{
+      "msg": "Client error occurred",
+      "val": false
+    };
+
+    if (!markedtdy || submittdy) {
+      return;
+    }
+
+    if (await showAlertBox(context, "Submit Attendance") == false) {
+      return;
+    }
+
+    if (context.mounted) {
+      res = await ApiService.sendData(context);
+    }
+
+    if (context.mounted) {
+      showAlertBox(
+        context,
+        "Submission",
+        res["msg"],
+        false,
+      );
+    }
+
+    if (res["val"]) {
+      await pref.setBool("submitted", true);
+      updateStates();
+    }
   }
 }

@@ -14,6 +14,11 @@ class LocationService {
   static void init(ServiceInstance service) async {
     DartPluginRegistrant.ensureInitialized();
 
+    service.on("stop").listen((event) {
+      locTimer.cancel();
+      service.stopSelf();
+    });
+
     Position? temp;
     int c = 0;
     const notifDetails = AndroidNotificationDetails(
@@ -32,6 +37,12 @@ class LocationService {
     SharedPreferences pref = await SharedPreferences.getInstance();
     await pref.reload();
 
+    if (await pref.getBool("markedtdy")!) {
+      notifPlug.cancel(0);
+      locTimer.cancel();
+      await service.stopSelf();
+    }
+
     if (await Geolocator.checkPermission() != LocationPermission.always) {
       temp = await Geolocator.getLastKnownPosition();
     } else {
@@ -39,6 +50,11 @@ class LocationService {
         desiredAccuracy: LocationAccuracy.high,
       );
     }
+    await pref.setStringList(
+      "position",
+      pref.getStringList("position")! +
+          ["${temp?.latitude}", "${temp?.longitude}"],
+    );
 
     await notifPlug.show(
       Config.notificationId,
@@ -86,7 +102,6 @@ class LocationService {
           event.longitude,
         );
 
-        print(event.speed);
         await pref.setStringList(
           "position",
           pref.getStringList("position")! +
@@ -113,10 +128,5 @@ class LocationService {
         );
       },
     );
-
-    service.on("stop").listen((event) {
-      locTimer.cancel();
-      service.stopSelf();
-    });
   }
 }
