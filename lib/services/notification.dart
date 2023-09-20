@@ -1,5 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:snippet_coder_utils/hex_color.dart';
+import 'package:timezone/timezone.dart';
 import 'package:tracker_app/config.dart';
 
 class NotifService {
@@ -53,7 +54,7 @@ class NotifService {
         NotificationDetails(android: androidNotificationDetails);
 
     await flutterLocalNotificationsPlugin?.show(
-      1,
+      0,
       title,
       text,
       notificationDetails,
@@ -61,25 +62,51 @@ class NotifService {
     );
   }
 
-  static killNotif() async {
-    // cancel the notification with id value of zero
-    List<ActiveNotification> x =
-        await flutterLocalNotificationsPlugin!.getActiveNotifications();
+  static schedNotif() async {
+    flutterLocalNotificationsPlugin?.cancel(1);
+    flutterLocalNotificationsPlugin?.cancel(2);
 
-    for (var i in x) {
-      print("--------------");
-      print(i.title);
-      print(i.tag);
-      print(i.payload);
-      print(i.id);
-      print(i.groupKey);
-      print(i.channelId);
-      print(i.body);
-      print("--------------");
-    }
+    AndroidNotificationDetails androidNotificationDetails =
+        AndroidNotificationDetails(
+      Config.notificationChannelIdAlert,
+      Config.notificationChannelNameAlert,
+      channelDescription: 'Alert Notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+      ticker: 'ticker',
+      ongoing: false,
+      color: HexColor(Config.appColor),
+    );
 
-    await flutterLocalNotificationsPlugin?.cancelAll();
-    await flutterLocalNotificationsPlugin?.cancel(0);
+    NotificationDetails notificationDetails =
+        NotificationDetails(android: androidNotificationDetails);
+
+    await flutterLocalNotificationsPlugin?.zonedSchedule(
+      1,
+      "Reminder",
+      "Start your attendance!",
+      nextInstanceOf9AM(),
+      notificationDetails,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+      payload: 'Test Payload',
+    );
+    await flutterLocalNotificationsPlugin?.zonedSchedule(
+      2,
+      "Reminder",
+      "Submit your attendance!",
+      nextInstanceOf7PM(),
+      notificationDetails,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+      payload: 'Test Payload',
+    );
+  }
+
+  static killNotif(int id) async {
+    await flutterLocalNotificationsPlugin?.cancel(id);
   }
 
   static Future<void> setupNotif() async {
@@ -125,5 +152,31 @@ class NotifService {
     print("IOS Done");
 
     return false;
+  }
+
+  static TZDateTime nextInstanceOf9AM() {
+    var loc = getLocation('Asia/Kolkata');
+    print("got 9AM day");
+    final TZDateTime now = TZDateTime.now(loc);
+    TZDateTime scheduledDate =
+        TZDateTime(loc, now.year, now.month, now.day, 9, 0);
+    if (scheduledDate.isBefore(now)) {
+      print("Next day");
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+    return scheduledDate;
+  }
+
+  static TZDateTime nextInstanceOf7PM() {
+    var loc = getLocation('Asia/Kolkata');
+    print("got 7PM day");
+    final TZDateTime now = TZDateTime.now(loc);
+    TZDateTime scheduledDate =
+        TZDateTime(loc, now.year, now.month, now.day, 19, 0);
+    if (scheduledDate.isBefore(now)) {
+      print("Next day");
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+    return scheduledDate;
   }
 }

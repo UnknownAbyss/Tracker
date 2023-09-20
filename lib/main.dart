@@ -4,6 +4,7 @@ import 'package:tracker_app/screens/home/home.dart';
 import 'package:tracker_app/services/background.dart';
 import 'package:tracker_app/services/notification.dart';
 import 'package:tracker_app/services/shared.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 Widget defaultpage = const Login();
 
@@ -17,6 +18,7 @@ void main() async {
   NotifService.init();
   BackgroundService.init();
   NotifService.setupNotif();
+  tz.initializeTimeZones();
 
   runApp(const MyApp());
 }

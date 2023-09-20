@@ -38,7 +38,7 @@ class LocationService {
     await pref.reload();
 
     if (await pref.getBool("markedtdy")!) {
-      notifPlug.cancel(0);
+      notifPlug.cancel(Config.notificationId);
       locTimer.cancel();
       await service.stopSelf();
     }

@@ -19,7 +19,7 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> {
+class _HomeState extends State<Home> with WidgetsBindingObserver {
   String title = "User:  ";
   bool marked = false;
   bool markedtdy = false;
@@ -35,8 +35,22 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     getUser(context);
+    NotifService.schedNotif();
     print("Doing updates");
     updateStates();
+    checkReset();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) checkReset();
   }
 
   @override
@@ -138,8 +152,9 @@ class _HomeState extends State<Home> {
                         padding: const EdgeInsets.only(bottom: 10),
                         child: statusText(
                           context,
-                          "",
-                          DateFormat('d/M/y').format(DateTime.now()),
+                          "Attendance for:",
+                          DateFormat('d/M/y').format(DateTime.now()
+                              .subtract(const Duration(hours: Config.cycle))),
                           HexColor(Config.appColor),
                         ),
                       ),
@@ -419,10 +434,34 @@ class _HomeState extends State<Home> {
     await pref.remove("position");
     updateStates();
     NotifService.displayNotif(
-      "Day Reset",
-      "Cache cleared",
+      "Good morning",
+      "Day reset",
       false,
     );
+  }
+
+  checkReset() async {
+    print("Called reset");
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    if (!pref.containsKey("prev")) {
+      pref.setInt("prev", DateTime.now().millisecondsSinceEpoch);
+      BackgroundService.destroy();
+      resetDay();
+      return;
+    }
+    var prev = pref.getInt("prev");
+    var startday = DateTime.fromMillisecondsSinceEpoch(prev!)
+        .subtract(const Duration(hours: Config.cycle))
+        .day;
+    var endday =
+        DateTime.now().subtract(const Duration(hours: Config.cycle)).day;
+
+    if (startday != endday) {
+      pref.setInt("prev", DateTime.now().millisecondsSinceEpoch);
+      BackgroundService.destroy();
+      resetDay();
+      return;
+    }
   }
 
   submitbttn() async {
