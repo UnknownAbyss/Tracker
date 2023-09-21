@@ -10,27 +10,35 @@ import "package:tracker_app/services/shared.dart";
 class ApiService {
   static var client = http.Client();
 
-  static Future<bool> login(LoginReq req) async {
+  static Future<Map<String, dynamic>> login(LoginReq req) async {
     Map<String, String> reqHead = {
       "Content-Type": "application/json",
     };
 
     var url = Uri.http(Config.apiUrl, Config.loginRoute);
+    var res;
 
-    var res = await client.post(
-      url,
-      headers: reqHead,
-      body: jsonEncode(req.toJson()),
-    );
+    try {
+      res = await client.post(
+        url,
+        headers: reqHead,
+        body: jsonEncode(req.toJson()),
+      );
+    } catch (e) {
+      return <String, dynamic>{
+        "msg": "Request failed. Check Internet",
+        "val": false
+      };
+    }
 
     if (res.statusCode == 200) {
       LoginRes data = LoginRes.fromJson(json.decode(res.body));
       if (data.code == 0) {
         await Shared.setToken(data);
-        return true;
+        return <String, dynamic>{"msg": "Success", "val": true};
       }
     }
-    return false;
+    return <String, dynamic>{"msg": "Invalid Credentials", "val": false};
   }
 
   static Future<Map<String, dynamic>> sendData(BuildContext context) async {
@@ -54,6 +62,12 @@ class ApiService {
       return <String, dynamic>{"msg": "Invalid login. Re-login", "val": false};
     }
 
+    print(tokenData.token);
+    print(positions);
+    print(start);
+    print(end);
+    print(tokenData.token);
+
     Map<String, dynamic> x = <String, dynamic>{
       "token": tokenData.token,
       "positions": positions,
@@ -62,11 +76,20 @@ class ApiService {
       "date": start,
     };
 
-    var res = await client.post(
-      url,
-      headers: reqHead,
-      body: jsonEncode(x),
-    );
+    var res;
+
+    try {
+      res = await client.post(
+        url,
+        headers: reqHead,
+        body: jsonEncode(x),
+      );
+    } catch (e) {
+      return <String, dynamic>{
+        "msg": "Couldn't submit. Check Internet and try again",
+        "val": false
+      };
+    }
 
     if (res.statusCode == 200) {
       Map<String, dynamic> data = json.decode(res.body);

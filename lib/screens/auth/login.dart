@@ -227,7 +227,7 @@ class _LoginState extends State<Login> {
                     setState(() {
                       loading = false;
                     });
-                    if (res) {
+                    if (res['val']) {
                       Navigator.pushNamedAndRemoveUntil(
                         context,
                         '/home',
@@ -237,7 +237,7 @@ class _LoginState extends State<Login> {
                       FormHelper.showSimpleAlertDialog(
                         context,
                         Config.appName,
-                        "Invalid Credentials",
+                        res['msg'],
                         "Ok",
                         () {
                           Navigator.pop(context);

@@ -25,14 +25,18 @@ class BackgroundService {
     );
   }
 
-  static void spawnLocIsolate(int starttime) async {
+  static Future<bool> spawnLocIsolate(int starttime) async {
     SharedPreferences pref = await SharedPreferences.getInstance();
     await pref.setInt("start", starttime);
     await pref.setBool("ongoing", true);
     await pref.remove("latest_loc");
     await pref.setDouble("dist", 0);
     await pref.setStringList("position", []);
-    service.startService();
+    print("Started service");
+    var res = await service.startService();
+    print("Post Started service");
+
+    return res;
   }
 
   static void destroy() async {

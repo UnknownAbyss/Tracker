@@ -8,19 +8,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tracker_app/config.dart';
 
 class LocationService {
-  static late Timer locTimer;
+  static Timer? locTimer;
 
   @pragma('vm:entry-point')
   static void init(ServiceInstance service) async {
     DartPluginRegistrant.ensureInitialized();
+    print("Inside service");
 
-    service.on("stop").listen((event) {
-      locTimer.cancel();
-      service.stopSelf();
+    service.on("stop").listen((event) async {
+      print("Stop called");
+      if (locTimer!.isActive) {
+        locTimer?.cancel();
+      }
+      await service.stopSelf();
     });
 
     Position? temp;
-    int c = 0;
     const notifDetails = AndroidNotificationDetails(
       Config.notificationChannelId,
       Config.notificationChannelName,
@@ -39,7 +42,7 @@ class LocationService {
 
     if (await pref.getBool("markedtdy")!) {
       notifPlug.cancel(Config.notificationId);
-      locTimer.cancel();
+      locTimer?.cancel();
       await service.stopSelf();
     }
 
@@ -56,10 +59,20 @@ class LocationService {
           ["${temp?.latitude}", "${temp?.longitude}"],
     );
 
+    List<Placemark> p = await placemarkFromCoordinates(
+      temp!.latitude,
+      temp.longitude,
+    );
+
+    await pref.setString(
+      "latest_loc",
+      "${p[0].name} | ${p[0].locality} | ${p[0].administrativeArea}",
+    );
+
     await notifPlug.show(
       Config.notificationId,
       'Distance | Location',
-      '0.000 km, Counter: 0 | -',
+      '0.000 km | -',
       const NotificationDetails(
         android: notifDetails,
       ),
@@ -117,11 +130,10 @@ class LocationService {
         print(pref.getString("latest_loc"));
         print(pref.getDouble("dist"));
 
-        c++;
         notifPlug.show(
           Config.notificationId,
           'Distance | Location',
-          '${(pref.getDouble("dist")! / 1000).toStringAsFixed(3)} km, Counter: $c | ${p[0].name}, ${p[0].locality}',
+          '${(pref.getDouble("dist")! / 1000).toStringAsFixed(3)} km | ${p[0].name}, ${p[0].locality}',
           const NotificationDetails(
             android: notifDetails,
           ),

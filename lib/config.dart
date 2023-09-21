@@ -11,11 +11,11 @@ class Config {
   static const String submitRoute = "/location/submit";
 
   // Distance checking frequency
-  static const int distPeriod = 20;
-  static const double distFilter = 5;
+  static const int distPeriod = 45;
+  static const double distFilter = 100;
 
   // Update frequency of Values
-  static const int updateFreq = 10;
+  static const int updateFreq = 45;
   static const notificationId = 888;
   static const notificationChannelId = 'my_foreground';
   static const notificationChannelName = 'location_foreground';

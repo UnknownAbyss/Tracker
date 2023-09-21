@@ -51,6 +51,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) checkReset();
+    if (markedtdy && !submittdy) submitbttn(false);
   }
 
   @override
@@ -60,34 +61,41 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         body: _HomeUI(context),
         appBar: AppBar(
           backgroundColor: HexColor(Config.appColor),
-          toolbarHeight: kToolbarHeight * 1.5,
+          toolbarHeight: kToolbarHeight * 2,
           title: Text(title),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.elliptical(200, 30),
+              bottomRight: Radius.elliptical(200, 30),
+            ),
+          ),
           actions: [
+            // IconButton(
+            //   onPressed: () async {
+            //     bool? x = await showAlertBox(context, "Sync");
+            //     if (x! && context.mounted) {
+            //       resetDay();
+            //     }
+            //   },
+            //   icon: const Icon(
+            //     Icons.sync,
+            //     color: Colors.white,
+            //   ),
+            // ),
+            // IconButton(
+            //   onPressed: () async {
+            //     bool? x = await showAlertBox(context, "Sync");
+            //     if (x! && context.mounted) {
+            //       refresh();
+            //     }
+            //   },
+            //   icon: const Icon(
+            //     Icons.refresh_sharp,
+            //     color: Colors.white,
+            //   ),
+            // ),
             IconButton(
-              onPressed: () async {
-                bool? x = await showAlertBox(context, "Sync");
-                if (x! && context.mounted) {
-                  resetDay();
-                }
-              },
-              icon: const Icon(
-                Icons.sync,
-                color: Colors.white,
-              ),
-            ),
-            IconButton(
-              onPressed: () async {
-                bool? x = await showAlertBox(context, "Sync");
-                if (x! && context.mounted) {
-                  refresh();
-                }
-              },
-              icon: const Icon(
-                Icons.refresh_sharp,
-                color: Colors.white,
-              ),
-            ),
-            IconButton(
+              tooltip: "Logout",
               onPressed: () async {
                 bool? x = await showAlertBox(context, "Logout");
                 if (x! && context.mounted) {
@@ -113,32 +121,42 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               const EdgeInsets.only(top: 30, left: 30, right: 30, bottom: 30),
           child: Column(
             children: [
-              SizedBox(
-                height: 150,
-                width: MediaQuery.of(context).size.width - 60,
-                child: ElevatedButton(
-                  onPressed: markedtdy ? null : attendButton,
-                  style: ButtonStyle(
-                    elevation: MaterialStatePropertyAll(5),
-                    backgroundColor: MaterialStatePropertyAll(
-                      marked
-                          ? HexColor(Config.appColor).withOpacity(0.9)
-                          : HexColor(Config.appColor),
-                    ),
-                    side: MaterialStatePropertyAll(
-                      BorderSide(
-                        width: 5,
-                        color: marked ? Colors.red.shade300 : Colors.white54,
+              Row(
+                children: [
+                  SizedBox(
+                    height: (MediaQuery.of(context).size.width - 75) / 2,
+                    width: (MediaQuery.of(context).size.width - 75) / 2,
+                    child: ElevatedButton(
+                      onPressed: markedtdy ? null : attendButton,
+                      style: ButtonStyle(
+                        elevation: MaterialStatePropertyAll(5),
+                        backgroundColor: MaterialStatePropertyAll(
+                          HexColor(Config.appColor),
+                        ),
+                        side: MaterialStatePropertyAll(
+                          BorderSide(
+                            width: 5,
+                            color: marked
+                                ? Colors.orange.shade200
+                                : markedtdy
+                                    ? Colors.green
+                                    : Colors.red.shade300,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        marked ? "End Attendance" : "Start Attendance",
+                        style: TextStyle(
+                          color: markedtdy ? Colors.grey : Colors.white,
+                        ),
                       ),
                     ),
                   ),
-                  child: Text(
-                    marked ? "End Attendance" : "Start Attendance",
-                    style: TextStyle(
-                      color: markedtdy ? Colors.grey : Colors.white,
-                    ),
+                  SizedBox(
+                    width: 15,
                   ),
-                ),
+                  _Submitter(context),
+                ],
               ),
               Padding(
                 padding: const EdgeInsets.only(
@@ -163,6 +181,12 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                         "Marked Today:",
                         markedtdy ? "Yes" : "No",
                         markedtdy ? Colors.green : Colors.red,
+                      ),
+                      statusText(
+                        context,
+                        "Submitted:",
+                        submittdy ? "Yes" : "No",
+                        submittdy ? Colors.green : Colors.red,
                       ),
                       statusText(
                         context,
@@ -199,7 +223,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   Text(curloc),
                 ],
               ),
-              _Submitter(context),
             ],
           ),
         ),
@@ -208,35 +231,33 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   }
 
   Widget _Submitter(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 30),
-      child: Column(
-        children: [
-          const Text(
-            "Submitted to Server",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+    return SizedBox(
+      height: (MediaQuery.of(context).size.width - 75) / 2,
+      width: (MediaQuery.of(context).size.width - 75) / 2,
+      child: ElevatedButton(
+        onPressed: markedtdy && !submittdy ? () => submitbttn(true) : null,
+        style: ButtonStyle(
+          elevation: MaterialStatePropertyAll(5),
+          backgroundColor: MaterialStatePropertyAll(
+            HexColor(Config.appColor),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                color: submittdy ? Colors.green : Colors.red,
-              ),
-              const SizedBox(width: 5),
-              Text(submittdy ? "Submitted" : "Not Submitted"),
-            ],
-          ),
-          ElevatedButton(
-            style: ButtonStyle(
-              backgroundColor:
-                  MaterialStatePropertyAll(HexColor(Config.appColor)),
+          side: MaterialStatePropertyAll(
+            BorderSide(
+              width: 5,
+              color: markedtdy
+                  ? submittdy
+                      ? Colors.green
+                      : Colors.red.shade300
+                  : Colors.grey.shade500,
             ),
-            onPressed: markedtdy && !submittdy ? submitbttn : null,
-            child: Text("Submit to server"),
           ),
-        ],
+        ),
+        child: Text(
+          submittdy ? "Submited " : "Submit now",
+          style: TextStyle(
+            color: markedtdy && !submittdy ? Colors.white : Colors.grey,
+          ),
+        ),
       ),
     );
   }
@@ -284,7 +305,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       children: [
         Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         Expanded(
           child: Align(
@@ -351,18 +372,26 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         await pref.setBool("markedtdy", true);
         print("Ending notif");
         BackgroundService.destroy();
+        if (markedtdy && !submittdy) submitbttn(false);
       } else {
         DateTime temp = DateTime.now();
-        setState(() {
-          marked = !marked;
-          starttime = temp;
-          timer = Timer.periodic(const Duration(seconds: Config.updateFreq),
-              (timer) {
-            refresh();
-          });
-        });
         print("Spawning Isolate");
-        BackgroundService.spawnLocIsolate(temp.millisecondsSinceEpoch);
+        var res = await BackgroundService.spawnLocIsolate(
+            temp.millisecondsSinceEpoch);
+        if (res) {
+          setState(() {
+            marked = !marked;
+            starttime = temp;
+            timer = Timer.periodic(const Duration(seconds: Config.updateFreq),
+                (timer) {
+              refresh();
+            });
+          });
+        } else {
+          if (context.mounted) {
+            showAlertBox(context, "Attendance", "Something went wrong", false);
+          }
+        }
       }
     }
   }
@@ -377,8 +406,13 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     if (pref.containsKey("latest_loc")) {
       loc = pref.getString("latest_loc")!;
     }
-    if (pref.containsKey("dist")) {
-      dist = pref.getDouble("dist")!;
+    if (pref.containsKey("position")) {
+      var pos = pref.getStringList("position");
+      var dpos = pos!.map(double.parse).toList();
+      for (int i = 1; i < dpos.length / 2; i++) {
+        dist += Geolocator.distanceBetween(
+            dpos[i * 2 - 2], dpos[i * 2 - 1], dpos[i * 2], dpos[i * 2 + 1]);
+      }
     }
     setState(() {
       curloc = loc;
@@ -397,6 +431,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     if (!pref.containsKey("submitted")) {
       await pref.setBool("submitted", false);
     }
+    print(pref.getStringList("position"));
 
     setState(() {
       if (!pref.containsKey("start")) {
@@ -464,7 +499,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     }
   }
 
-  submitbttn() async {
+  submitbttn(bool ask) async {
     SharedPreferences pref = await SharedPreferences.getInstance();
     Map<String, dynamic> res = <String, dynamic>{
       "msg": "Client error occurred",
@@ -474,9 +509,10 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     if (!markedtdy || submittdy) {
       return;
     }
-
-    if (await showAlertBox(context, "Submit Attendance") == false) {
-      return;
+    if (ask) {
+      if (await showAlertBox(context, "Submit Attendance") == false) {
+        return;
+      }
     }
 
     if (context.mounted) {
