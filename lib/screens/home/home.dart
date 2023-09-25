@@ -20,7 +20,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> with WidgetsBindingObserver {
-  String title = "User:  ";
+  String title = "Tracker:  ";
   bool marked = false;
   bool markedtdy = false;
   bool submittdy = false;
@@ -58,11 +58,19 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
+        backgroundColor: HexColor(Config.appColor),
         body: _HomeUI(context),
         appBar: AppBar(
-          backgroundColor: HexColor(Config.appColor),
+          backgroundColor: Colors.white,
           toolbarHeight: kToolbarHeight * 2,
-          title: Text(title),
+          title: Text(
+            "TRACKER",
+            style: TextStyle(
+              color: HexColor(Config.appColor),
+              fontWeight: FontWeight.bold,
+              fontSize: 25,
+            ),
+          ),
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.elliptical(200, 30),
@@ -70,31 +78,21 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             ),
           ),
           actions: [
-            // IconButton(
-            //   onPressed: () async {
-            //     bool? x = await showAlertBox(context, "Sync");
-            //     if (x! && context.mounted) {
-            //       resetDay();
-            //     }
-            //   },
-            //   icon: const Icon(
-            //     Icons.sync,
-            //     color: Colors.white,
-            //   ),
-            // ),
-            // IconButton(
-            //   onPressed: () async {
-            //     bool? x = await showAlertBox(context, "Sync");
-            //     if (x! && context.mounted) {
-            //       refresh();
-            //     }
-            //   },
-            //   icon: const Icon(
-            //     Icons.refresh_sharp,
-            //     color: Colors.white,
-            //   ),
-            // ),
             IconButton(
+              iconSize: 30,
+              onPressed: () async {
+                bool? x = await showAlertBox(context, "Sync");
+                if (x! && context.mounted) {
+                  resetDay();
+                }
+              },
+              icon: Icon(
+                Icons.sync,
+                color: HexColor(Config.appColor),
+              ),
+            ),
+            IconButton(
+              iconSize: 30,
               tooltip: "Logout",
               onPressed: () async {
                 bool? x = await showAlertBox(context, "Logout");
@@ -102,9 +100,9 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   Shared.logout(context);
                 }
               },
-              icon: const Icon(
+              icon: Icon(
                 Icons.logout,
-                color: Colors.white,
+                color: HexColor(Config.appColor),
               ),
             ),
           ],
@@ -121,42 +119,22 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               const EdgeInsets.only(top: 30, left: 30, right: 30, bottom: 30),
           child: Column(
             children: [
-              Row(
-                children: [
-                  SizedBox(
-                    height: (MediaQuery.of(context).size.width - 75) / 2,
-                    width: (MediaQuery.of(context).size.width - 75) / 2,
-                    child: ElevatedButton(
-                      onPressed: markedtdy ? null : attendButton,
-                      style: ButtonStyle(
-                        elevation: MaterialStatePropertyAll(5),
-                        backgroundColor: MaterialStatePropertyAll(
-                          HexColor(Config.appColor),
-                        ),
-                        side: MaterialStatePropertyAll(
-                          BorderSide(
-                            width: 5,
-                            color: marked
-                                ? Colors.orange.shade200
-                                : markedtdy
-                                    ? Colors.green
-                                    : Colors.red.shade300,
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        marked ? "End Attendance" : "Start Attendance",
-                        style: TextStyle(
-                          color: markedtdy ? Colors.grey : Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 15,
-                  ),
-                  _Submitter(context),
-                ],
+              statusText(
+                context,
+                title,
+                "${DateFormat('d/M/y').format(DateTime.now().subtract(const Duration(hours: Config.cycle)))} ${20 < DateTime.now().hour || DateTime.now().hour < Config.cycle ? '🌙' : '☀️'}",
+                Colors.white,
+              ),
+              const SizedBox(
+                height: 30,
+              ),
+              _Submitter(context),
+              const SizedBox(
+                height: 15,
+              ),
+              _CurStatus(context),
+              const SizedBox(
+                height: 15,
               ),
               Padding(
                 padding: const EdgeInsets.only(
@@ -164,64 +142,61 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: statusText(
-                          context,
-                          "Attendance for:",
-                          DateFormat('d/M/y').format(DateTime.now()
-                              .subtract(const Duration(hours: Config.cycle))),
-                          HexColor(Config.appColor),
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          statusText(
+                            context,
+                            "START 🕘",
+                            starttime != null
+                                ? DateFormat('h:mm a').format(starttime!)
+                                : "-",
+                            !marked && !markedtdy
+                                ? Colors.orange.shade300
+                                : Colors.green.shade300,
+                          ),
+                          statusText(
+                            context,
+                            "END 🕖",
+                            endtime != null
+                                ? DateFormat('h:mm a').format(endtime!)
+                                : "-",
+                            markedtdy
+                                ? Colors.green.shade300
+                                : Colors.orange.shade300,
+                          ),
+                        ],
                       ),
-                      statusText(
-                        context,
-                        "Marked Today:",
-                        markedtdy ? "Yes" : "No",
-                        markedtdy ? Colors.green : Colors.red,
+                      const SizedBox(
+                        height: 20,
                       ),
-                      statusText(
-                        context,
-                        "Submitted:",
-                        submittdy ? "Yes" : "No",
-                        submittdy ? Colors.green : Colors.red,
-                      ),
-                      statusText(
-                        context,
-                        "Start Time:",
-                        starttime != null
-                            ? DateFormat('h:mm a').format(starttime!)
-                            : "-",
-                        Colors.black,
-                      ),
-                      statusText(
-                        context,
-                        "End Time:",
-                        endtime != null
-                            ? DateFormat('h:mm a').format(endtime!)
-                            : "-",
-                        Colors.black,
-                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          statusText(
+                            context,
+                            "Distance 🗺️",
+                            "${distance.toStringAsFixed(3)} km",
+                            marked || markedtdy
+                                ? Colors.green.shade300
+                                : Colors.orange.shade300,
+                          ),
+                          statusText(
+                            context,
+                            "Location📍",
+                            curloc.split(" | ")[0],
+                            marked || markedtdy
+                                ? Colors.green.shade300
+                                : Colors.orange.shade300,
+                          ),
+                        ],
+                      )
                     ],
                   ),
                 ),
-              ),
-              Column(
-                children: [
-                  const Text(
-                    "Distance",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
-                  ),
-                  Text("${distance.toStringAsFixed(3)} km"),
-                  const SizedBox(height: 20),
-                  const Text(
-                    "Current Location",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
-                  ),
-                  Text(curloc),
-                ],
               ),
             ],
           ),
@@ -230,32 +205,82 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     );
   }
 
-  Widget _Submitter(BuildContext context) {
-    return SizedBox(
-      height: (MediaQuery.of(context).size.width - 75) / 2,
-      width: (MediaQuery.of(context).size.width - 75) / 2,
-      child: ElevatedButton(
-        onPressed: markedtdy && !submittdy ? () => submitbttn(true) : null,
-        style: ButtonStyle(
-          elevation: MaterialStatePropertyAll(5),
-          backgroundColor: MaterialStatePropertyAll(
-            HexColor(Config.appColor),
-          ),
-          side: MaterialStatePropertyAll(
-            BorderSide(
-              width: 5,
-              color: markedtdy
-                  ? submittdy
-                      ? Colors.green
-                      : Colors.red.shade300
-                  : Colors.grey.shade500,
+  Widget _CurStatus(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            "Status:  ",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
+          ),
+          Text(
+            submittdy
+                ? 'Complete! ✅'
+                : marked
+                    ? 'Ongoing'
+                    : markedtdy
+                        ? 'Pending Submit ⏳'
+                        : 'Not started',
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: submittdy
+                    ? Colors.green
+                    : marked
+                        ? Colors.red.shade300
+                        : markedtdy
+                            ? Colors.orange.shade200
+                            : Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _Submitter(BuildContext context) {
+    var dim = MediaQuery.of(context).size.width - 200;
+    return SizedBox(
+      height: dim,
+      width: dim,
+      child: ElevatedButton(
+        onPressed: markedtdy
+            ? submittdy
+                ? () {}
+                : () => submitbttn(true)
+            : attendButton,
+        style: ButtonStyle(
+          shape: const MaterialStatePropertyAll(CircleBorder()),
+          elevation: const MaterialStatePropertyAll(5),
+          backgroundColor: MaterialStatePropertyAll(
+            submittdy
+                ? Colors.green
+                : marked
+                    ? Colors.red.shade300
+                    : markedtdy
+                        ? Colors.orange.shade200
+                        : Colors.white,
           ),
         ),
         child: Text(
-          submittdy ? "Submited " : "Submit now",
+          submittdy
+              ? "Done!"
+              : marked
+                  ? "End"
+                  : markedtdy
+                      ? "Submit"
+                      : "Start",
           style: TextStyle(
-            color: markedtdy && !submittdy ? Colors.white : Colors.grey,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: !marked && !markedtdy && !submittdy
+                ? HexColor(Config.appColor)
+                : Colors.white,
           ),
         ),
       ),
@@ -301,24 +326,36 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
 
   Widget statusText(
       BuildContext context, String title, String val, Color color) {
-    return Row(
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: Colors.white,
+          ),
         ),
-        Expanded(
-          child: Align(
-            alignment: Alignment.centerRight,
+        const SizedBox(
+          height: 7,
+        ),
+        Container(
+          width: 130,
+          child: Center(
             child: Text(
               val,
+              overflow: TextOverflow.fade,
+              softWrap: false,
+              maxLines: 1,
               style: TextStyle(
                 color: color,
                 fontSize: 18,
               ),
             ),
           ),
-        )
+        ),
       ],
     );
   }
@@ -330,7 +367,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       decoded = JwtDecoder.decode(data.token);
       print(data.token);
       setState(() {
-        title = "User: ${decoded['user']}";
+        title = "${decoded['user']}";
       });
     } catch (e) {
       if (context.mounted) {
@@ -355,7 +392,15 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     }
 
     bool? x;
-    x = await showAlertBox(context, "Attendance");
+
+    if (context.mounted) {
+      x = await showAlertBox(
+          context,
+          "Attendance",
+          marked
+              ? "Do you wish to end your attendance"
+              : "Do you wish to start your attendance?");
+    }
 
     if (x!) {
       if (marked) {
@@ -400,7 +445,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     SharedPreferences pref = await SharedPreferences.getInstance();
 
     print("Refreshn");
-    String loc = "No location found";
+    String loc = "Unknown";
     double dist = 0;
     await pref.reload();
     if (pref.containsKey("latest_loc")) {
