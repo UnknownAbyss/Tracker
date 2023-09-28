@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
@@ -402,8 +403,13 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               : "Do you wish to start your attendance?");
     }
 
+    var running = await FlutterBackgroundService().isRunning();
+
+    print("STATUS");
+    print(marked);
+    print(running);
     if (x!) {
-      if (marked) {
+      if (marked && running) {
         DateTime temp = DateTime.now();
         setState(() {
           marked = !marked;
@@ -416,13 +422,43 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         await pref.setBool("ongoing", false);
         await pref.setBool("markedtdy", true);
         print("Ending notif");
+
         BackgroundService.destroy();
-        if (markedtdy && !submittdy) submitbttn(false);
-      } else {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (markedtdy && !submittdy) submitbttn(false);
+        });
+      } else if (!marked && !running) {
         DateTime temp = DateTime.now();
         print("Spawning Isolate");
+
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              return const Dialog(
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      Text("Loading"),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        }
+
         var res = await BackgroundService.spawnLocIsolate(
-            temp.millisecondsSinceEpoch);
+          temp.millisecondsSinceEpoch,
+        );
+        if (mounted) {
+          Navigator.pop(context);
+        }
+
         if (res) {
           setState(() {
             marked = !marked;
@@ -437,6 +473,11 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             showAlertBox(context, "Attendance", "Something went wrong", false);
           }
         }
+      } else {
+        if (context.mounted) {
+          showAlertBox(context, "Attendance", "Wait for a few seconds", false);
+          BackgroundService.destroy();
+        }
       }
     }
   }
@@ -448,6 +489,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     String loc = "Unknown";
     double dist = 0;
     await pref.reload();
+
     if (pref.containsKey("latest_loc")) {
       loc = pref.getString("latest_loc")!;
     }
@@ -459,6 +501,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             dpos[i * 2 - 2], dpos[i * 2 - 1], dpos[i * 2], dpos[i * 2 + 1]);
       }
     }
+
     setState(() {
       curloc = loc;
       distance = dist / 1000;
@@ -512,6 +555,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     await pref.remove("latest_loc");
     await pref.remove("dist");
     await pref.remove("position");
+    FlutterBackgroundService().invoke("stop");
     updateStates();
     NotifService.displayNotif(
       "Good morning",

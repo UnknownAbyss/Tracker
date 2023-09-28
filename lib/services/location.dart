@@ -8,20 +8,44 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tracker_app/config.dart';
 
 class LocationService {
-  static Timer? locTimer;
-
   @pragma('vm:entry-point')
   static void init(ServiceInstance service) async {
+    Timer? locTimer;
     DartPluginRegistrant.ensureInitialized();
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    await pref.reload();
     print("Inside service");
 
-    service.on("stop").listen((event) async {
-      print("Stop called");
-      if (locTimer!.isActive) {
-        locTimer?.cancel();
-      }
-      await service.stopSelf();
-    });
+    service.on("stop").listen(
+      (ondata) async {
+        print("Stop called");
+        if (locTimer!.isActive) {
+          locTimer.cancel();
+        }
+        var temp;
+        if (await Geolocator.checkPermission() != LocationPermission.always) {
+          temp = await Geolocator.getLastKnownPosition();
+        } else {
+          temp = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+          );
+        }
+        await pref.setStringList(
+          "position",
+          pref.getStringList("position")! +
+              ["${temp?.latitude}", "${temp?.longitude}"],
+        );
+        await service.stopSelf();
+      },
+      onError: (obj, str) {
+        print(obj);
+        print(str);
+        print("Error occured!");
+      },
+      onDone: () {
+        print("Service done!");
+      },
+    );
 
     Position? temp;
     const notifDetails = AndroidNotificationDetails(
@@ -37,10 +61,8 @@ class LocationService {
         FlutterLocalNotificationsPlugin();
 
     print("method called");
-    SharedPreferences pref = await SharedPreferences.getInstance();
-    await pref.reload();
 
-    if (await pref.getBool("markedtdy")!) {
+    if (pref.getBool("markedtdy")!) {
       notifPlug.cancel(Config.notificationId);
       locTimer?.cancel();
       await service.stopSelf();
@@ -140,5 +162,7 @@ class LocationService {
         );
       },
     );
+
+    service.invoke("complete");
   }
 }
