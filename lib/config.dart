@@ -11,8 +11,9 @@ class Config {
   static const String submitRoute = "/location/submit";
 
   // Distance checking frequency
-  static const int distPeriod = 45;
+  static const int distPeriod = 30;
   static const double distFilter = 100;
+  static const double spdFilter = 10;
 
   // Update frequency of Values
   static const int updateFreq = 45;

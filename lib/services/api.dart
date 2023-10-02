@@ -59,7 +59,11 @@ class ApiService {
     var end = pref.getInt("end");
 
     if (tokenData.code != 0) {
-      return <String, dynamic>{"msg": "Invalid login. Re-login", "val": false};
+      return <String, dynamic>{
+        "msg": "Invalid login. Re-login",
+        "val": false,
+        "dist": -1,
+      };
     }
 
     print(tokenData.token);
@@ -87,18 +91,32 @@ class ApiService {
     } catch (e) {
       return <String, dynamic>{
         "msg": "Couldn't submit. Check Internet and try again",
-        "val": false
+        "val": false,
+        "dist": -1,
       };
     }
 
     if (res.statusCode == 200) {
       Map<String, dynamic> data = json.decode(res.body);
       if (data["code"] == 0) {
-        return <String, dynamic>{"msg": data["msg"], "val": true};
+        print(data);
+        return <String, dynamic>{
+          "msg": data["msg"],
+          "val": true,
+          "dist": data["dist"],
+        };
       } else {
-        return <String, dynamic>{"msg": data["msg"], "val": false};
+        return <String, dynamic>{
+          "msg": data["msg"],
+          "val": false,
+          "dist": -1,
+        };
       }
     }
-    return <String, dynamic>{"msg": "Request failed", "val": false};
+    return <String, dynamic>{
+      "msg": "Request failed",
+      "val": false,
+      "dist": -1,
+    };
   }
 }

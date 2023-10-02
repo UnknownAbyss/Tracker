@@ -424,7 +424,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         print("Ending notif");
 
         BackgroundService.destroy();
-        Future.delayed(const Duration(seconds: 2), () {
+        Future.delayed(const Duration(seconds: 3), () {
           if (markedtdy && !submittdy) submitbttn(false);
         });
       } else if (!marked && !running) {
@@ -592,7 +592,8 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     SharedPreferences pref = await SharedPreferences.getInstance();
     Map<String, dynamic> res = <String, dynamic>{
       "msg": "Client error occurred",
-      "val": false
+      "val": false,
+      "dist": 0.0,
     };
 
     if (!markedtdy || submittdy) {
@@ -606,6 +607,12 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
 
     if (context.mounted) {
       res = await ApiService.sendData(context);
+    }
+
+    if (res["dist"] != -1) {
+      setState(() {
+        distance = res["dist"];
+      });
     }
 
     if (context.mounted) {

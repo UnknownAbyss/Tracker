@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tracker_app/config.dart';
 import 'package:tracker_app/services/location.dart';
@@ -60,6 +61,23 @@ class BackgroundService {
   static void destroy() async {
     SharedPreferences pref = await SharedPreferences.getInstance();
     print(pref.getStringList("position"));
+    var temp;
+    if (await Geolocator.checkPermission() != LocationPermission.always) {
+      temp = await Geolocator.getLastKnownPosition();
+    } else {
+      temp = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+      );
+    }
+
+    if (pref.containsKey("position")) {
+      await pref.setStringList(
+        "position",
+        pref.getStringList("position")! +
+            ["${temp?.latitude}", "${temp?.longitude}"],
+      );
+    }
+
     service.invoke("stop");
   }
 }

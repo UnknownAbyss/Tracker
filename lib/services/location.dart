@@ -22,19 +22,6 @@ class LocationService {
         if (locTimer!.isActive) {
           locTimer.cancel();
         }
-        var temp;
-        if (await Geolocator.checkPermission() != LocationPermission.always) {
-          temp = await Geolocator.getLastKnownPosition();
-        } else {
-          temp = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.high,
-          );
-        }
-        await pref.setStringList(
-          "position",
-          pref.getStringList("position")! +
-              ["${temp?.latitude}", "${temp?.longitude}"],
-        );
         await service.stopSelf();
       },
       onError: (obj, str) {
@@ -63,8 +50,8 @@ class LocationService {
     print("method called");
 
     if (pref.getBool("markedtdy")!) {
-      notifPlug.cancel(Config.notificationId);
       locTimer?.cancel();
+      notifPlug.cancel(Config.notificationId);
       await service.stopSelf();
     }
 
@@ -72,7 +59,7 @@ class LocationService {
       temp = await Geolocator.getLastKnownPosition();
     } else {
       temp = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.best,
       );
     }
     await pref.setStringList(
@@ -126,7 +113,7 @@ class LocationService {
           event.longitude,
         );
 
-        if (dist < Config.distFilter) {
+        if (dist < Config.distFilter || event.speed < Config.spdFilter) {
           return;
         }
 
